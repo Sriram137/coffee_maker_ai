@@ -80,7 +80,6 @@ async def on_message_streaming(message: cl.Message):
 
 
 @cl.on_message
-@traceable
 async def on_message_stream_with_history(message: cl.Message):
     # Maintain an array of messages in the user session
     message_history = cl.user_session.get("message_history", [])

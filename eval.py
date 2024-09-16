@@ -13,30 +13,35 @@ client = wrap_openai(OpenAI())
 def prompt_compliance_evaluator(run: Run, example: Example) -> dict:
 
 
-    print("*"*100)
-    print(example)
-    print("*"*100)
 
-    inputs = example.inputs['input']
-    outputs = example.outputs['output']
+    inputs = example.inputs["messages"]
+    outputs = example.outputs
+
+    message_history = []
 
 
+    system_prompt = None
+    for i in inputs:
+        if i and i['data']['role'] == 'system':
+            system_prompt = i['data']['content']
+
+        if system_prompt:
+            message_history.append(i)
 
     # Extract system prompt
-    # system_prompt = next((msg['data']['content'] for msg in inputs if msg['type'] == 'system'), "")
 
-    # Extract message history
-    message_history = []
-    for msg in inputs:
-        if msg['type'] in ['human', 'ai']:
-            message_history.append({
-                "role": "user" if msg['type'] == 'human' else "assistant",
-                "content": msg['data']['content']
-            })
+    # # Extract message history
+    # message_history = []
+    # for msg in inputs:
+    #     if msg['type'] in ['human', 'ai']:
+    #         message_history.append({
+    #             "role": "user" if msg['type'] == 'human' else "assistant",
+    #             "content": msg['data']['content']
+    #         })
 
     # Extract latest user message and model output
-    latest_message = message_history[-1]['content'] if message_history else ""
-    model_output = outputs['data']['content']
+    latest_message = message_history[-1]['data']['content'] if message_history else ""
+    model_output = outputs and outputs.get('data') and outputs.get('data').get('content') and outputs['data']['content']
 
     evaluation_prompt = f"""
     System Prompt: {system_prompt}
@@ -52,9 +57,12 @@ def prompt_compliance_evaluator(run: Run, example: Example) -> dict:
     Provide a score from 0 to 10, where 0 is completely non-compliant and 10 is perfectly compliant.
     Also provide a brief explanation for your score.
 
+    Inquisitiveness, on a scale of 0 to 10, how inquisitive is the model's response?
+
     Respond in the following JSON format:
     {{
         "score": <int>,
+        "inquisitiveness": <int>,
         "explanation": "<string>"
     }}
     """
